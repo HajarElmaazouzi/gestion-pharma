@@ -1,0 +1,26 @@
+@model IEnumerable<gestion_pharma.Models.Entities.Produit>
+
+@{
+    ViewData["Title"] = "Catalogue";
+}
+
+<h1>Catalogue</h1>
+
+<div class="row">
+    @foreach (var item in Model)
+    {
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                @if (!string.IsNullOrEmpty(item.ImagePath))
+                {
+                    <img src="~@item.ImagePath" class="card-img-top" alt="@item.Nom" style="height:180px;object-fit:cover;" />
+                }
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">@item.Nom</h5>
+                    <p class="card-text fw-bold">@item.Prix.ToString("C")</p>
+                    <a asp-action="Details" asp-route-id="@item.Id" class="mt-auto btn btn-sm btn-primary">Voir</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>

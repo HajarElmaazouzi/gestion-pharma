@@ -1,0 +1,30 @@
+@model gestion_pharma.Models.Entities.Commande
+@{ ViewData["Title"] = "Choisir le mode de paiement"; }
+<div class="container mt-5">
+    <h2>Mode de Paiement</h2>
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">Sur Place</div>
+                <div class="card-body">
+                    <h5 class="card-title">Payer à la pharmacie</h5>
+                    <p class="card-text">Récupérez votre commande et payez directement au comptoir.</p>
+                    <form asp-action="PaiementSurPlace" method="post">
+                        <input type="hidden" name="commandeId" value="@Model.Id" />
+                        <button type="submit" class="btn btn-light">Choisir ce mode</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">En Ligne</div>
+                <div class="card-body">
+                    <h5 class="card-title">Payer maintenant</h5>
+                    <p class="card-text">Payez sécurisé par carte bancaire.</p>
+                    <a asp-action="ProcessEnLigne" asp-route-commandeId="@Model.Id" class="btn btn-light">Choisir ce mode</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

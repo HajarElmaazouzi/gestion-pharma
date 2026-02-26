@@ -1,0 +1,26 @@
+@model gestion_pharma.Models.Entities.Produit
+
+@{
+    ViewData["Title"] = "Détails produit";
+}
+
+<h1>@Model.Nom</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        @if (!string.IsNullOrEmpty(Model.ImagePath))
+        {
+            <img src="~@Model.ImagePath" class="img-fluid" alt="@Model.Nom" />
+        }
+    </div>
+    <div class="col-md-6">
+        <h3 class="text-success">@Model.Prix.ToString("C")</h3>
+        <p>@Model.Description</p>
+
+        <form asp-action="Buy" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="productId" value="@Model.Id" />
+            <button type="submit" class="btn btn-success">Acheter</button>
+        </form>
+    </div>
+</div>

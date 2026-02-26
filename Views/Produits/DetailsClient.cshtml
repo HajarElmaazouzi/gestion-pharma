@@ -1,0 +1,65 @@
+@model gestion_pharma.Models.Entities.Produit
+@{
+    ViewData["Title"] = Model.Nom;
+    var comments = ViewBag.Comments as IEnumerable<gestion_pharma.Models.Entities.Commentaire>;
+    var likes = (int)(ViewBag.Likes ?? 0);
+    var dislikes = (int)(ViewBag.Dislikes ?? 0);
+}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6"><img src="@Model.ImagePath" class="img-fluid rounded" alt="@Model.Nom" /></div>
+        <div class="col-md-6">
+            <h2>@Model.Nom</h2><h3 class="text-primary">@Model.Prix.ToString("C")</h3><p class="lead">@Model.Description</p><hr />
+            <div class="d-flex align-items-center mb-3 text-muted"> <small>Avis utilisateurs :</small>
+                <form asp-action="React" method="post" class="mx-2 d-inline">
+                     <input type="hidden" name="produitId" value="@Model.Id" />
+                     <input type="hidden" name="type" value="Like" />
+                     <button type="submit" class="btn btn-outline-success btn-sm"><i class="bi bi-hand-thumbs-up-fill"></i> @likes</button>
+                </form>
+                <form asp-action="React" method="post" class="d-inline">
+                     <input type="hidden" name="produitId" value="@Model.Id" />
+                     <input type="hidden" name="type" value="Dislike" />
+                     <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-hand-thumbs-down-fill"></i> @dislikes</button>
+                </form>
+            </div>
+            <form asp-controller="Cart" asp-action="AddToCart" method="get" class="mb-3"><input type="hidden" name="productId" value="@Model.Id" /><div class="input-group" style="max-width: 200px;"><input type="number" name="quantity" value="1" min="1" class="form-control" /><button type="submit" class="btn btn-primary">Ajouter au panier</button></div></form>
+            <a asp-action="Index" class="btn btn-secondary">Retour au catalogue</a>
+        </div>
+    </div>
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3>Commentaires</h3>
+            <div class="card bg-light mb-3"><div class="card-body"><form asp-action="AddComment" method="post"><input type="hidden" name="produitId" value="@Model.Id" /><div class="form-group mb-2"><textarea name="content" class="form-control" rows="3" placeholder="Votre avis..." required></textarea></div><button type="submit" class="btn btn-sm btn-info text-white">Publier</button></form></div></div>
+            @if (comments != null && comments.Any()) 
+            { 
+                foreach (var c in comments) 
+                { 
+                    var commentLikes = c.Reactions?.Count(r => r.Type == gestion_pharma.Models.Entities.ReactionType.Like) ?? 0;
+                    var commentDislikes = c.Reactions?.Count(r => r.Type == gestion_pharma.Models.Entities.ReactionType.Dislike) ?? 0;
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-2 text-muted">@(c.Client?.Nom ?? "Anonyme") - <small>@c.CreatedAt.ToString("g")</small></h6>
+                            <p class="card-text">@c.Content</p>
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <form asp-action="ReactToComment" method="post" class="d-inline">
+                                    <input type="hidden" name="commentId" value="@c.Id" />
+                                    <input type="hidden" name="type" value="Like" />
+                                    <button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-hand-thumbs-up"></i> @commentLikes</button>
+                                </form>
+                                <form asp-action="ReactToComment" method="post" class="d-inline">
+                                    <input type="hidden" name="commentId" value="@c.Id" />
+                                    <input type="hidden" name="type" value="Dislike" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-hand-thumbs-down"></i> @commentDislikes</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div> 
+                } 
+            } 
+            else 
+            { 
+                <p>Aucun commentaire pour le moment.</p> 
+            }
+        </div>
+    </div>
+</div>

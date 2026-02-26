@@ -1,0 +1,99 @@
+@model gestion_pharma.Models.Entities.Commande
+@using gestion_pharma.Models.Entities
+@{ 
+    ViewData["Title"] = "Mon Panier";
+}
+<div class="container mt-5">
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Fidelity Points Card -->
+    @if (Model != null)
+    {
+        var loyaltyCard = ViewBag.LoyaltyCard as CarteFidelite;
+
+        <div class="card mb-4 border-info bg-light">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 class="card-title"><i class="bi bi-star-fill text-warning me-2"></i>Carte de Fidélité</h5>
+                        <p class="mb-1"><strong>Points disponibles :</strong> <span class="badge bg-info">@(loyaltyCard?.Points ?? 0) pts</span></p>
+                        @if (loyaltyCard?.Points > 0)
+                        {
+                            <p class="mb-0 text-muted small"><i class="bi bi-info-circle me-1"></i>10 points = 1€ de réduction</p>
+                        }
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <p class="mb-0 text-muted small">1 point pour 20€ dépensés<br/>10 points = 1€ de réduction</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Redeem all points button and custom points form *@
+        @if (loyaltyCard != null && loyaltyCard.Points >= 10)
+        {
+            var redeemableUnits = loyaltyCard.Points / 10; // 10 points = 1 unit
+            var discountAmount = redeemableUnits * 1.0; // 1€ per 10 points
+            <div class="mb-3 d-flex gap-2 align-items-center">
+                <form asp-action="UseAllPoints" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="commandeId" value="@Model.Id" />
+                    <button type="submit" class="btn btn-primary">Utiliser tous mes points (réduction : -@discountAmount.ToString("C"))</button>
+                </form>
+
+                <form asp-action="ApplyPoints" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="commandeId" value="@Model.Id" />
+                    <div class="input-group">
+                        <input type="number" name="points" class="form-control" min="10" step="10" max="@loyaltyCard.Points" placeholder="Points à utiliser" required />
+                        <button type="submit" class="btn btn-outline-primary">Appliquer</button>
+                    </div>
+                    <div class="form-text small text-muted">Saisissez un multiple de 10 (10 pts = 1€)</div>
+                </form>
+            </div>
+        }
+    }
+    
+    <h2>Mon Panier</h2>
+    @if (Model == null || Model.LigneCommandes == null || !Model.LigneCommandes.Any())
+    { <div class="alert alert-info">Votre panier est vide. <a asp-controller="Produits" asp-action="Index">Retourner au catalogue</a>.</div> }
+    else
+    {
+        <table class="table table-hover">
+            <thead><tr><th>Produit</th><th>Prix Unitaire</th><th>Quantité</th><th>Total</th><th>Actions</th></tr></thead>
+            <tbody>
+                @foreach (var line in Model.LigneCommandes)
+                {
+                    <tr>
+                        <td>@(line.Produit?.Nom ?? "Produit #" + line.ProduitId)</td>
+                        <td>@line.PrixUnitaire.ToString("C")</td>
+                        <td>@line.Quantite</td>
+                        <td>@((line.PrixUnitaire * line.Quantite).ToString("C"))</td>
+                        <td><form asp-controller="Cart" asp-action="RemoveFromCart" method="post"><input type="hidden" name="ligneId" value="@line.Id" /><button type="submit" class="btn btn-sm btn-danger">Retirer</button></form></td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot><tr><td colspan="3" class="text-end"><strong>Total :</strong></td><td colspan="2"><strong>@Model.Montant.ToString("C")</strong></td></tr></tfoot>
+        </table>
+        <div class="d-flex justify-content-end">
+            <a asp-controller="Produits" asp-action="Index" class="btn btn-secondary me-2">Continuer mes achats</a>
+            <a asp-controller="Paiements" asp-action="SelectMethod" asp-route-commandeId="@Model.Id" class="btn btn-success">Valider la commande</a>
+        </div>
+    }
+</div>

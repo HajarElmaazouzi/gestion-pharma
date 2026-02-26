@@ -1,0 +1,36 @@
+@model IEnumerable<gestion_pharma.Models.Entities.Client>
+
+@{
+    ViewData["Title"] = "Clients";
+}
+
+<h1>Clients</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th>Email</th>
+            <th>Téléphone</th>
+            <th>Inscription</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var c in Model)
+{
+        <tr>
+            <td>@c.Nom</td>
+            <td>@c.Prenom</td>
+            <td>@c.Email</td>
+            <td>@c.Telephone</td>
+            <td>@c.DateInscription.ToLocalTime().ToString("g")</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@c.Id">Détails</a> |
+                <a asp-action="Delete" asp-route-id="@c.Id">Supprimer</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

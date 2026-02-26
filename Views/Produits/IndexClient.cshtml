@@ -1,0 +1,1038 @@
+@using System.Linq
+@model IEnumerable<gestion_pharma.Models.Entities.Produit>
+
+@{
+    ViewData["Title"] = "Catalogue";
+}
+
+<!-- Floating Cart Button -->
+<div style="position: fixed; top: 90px; right: 20px; z-index: 999;">
+    <a asp-controller="Cart" asp-action="Index" class="btn btn-primary btn-lg rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" title="Aller au panier" aria-label="Panier">
+        <i class="bi bi-cart3" style="font-size: 24px;"></i>
+    </a>
+</div>
+
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Nos Produits</h1>
+            <p class="lead fw-normal text-white-50 mb-4">La meilleure qualité pour votre santé</p>
+            <form asp-action="IndexClient" method="get" class="d-flex justify-content-center">
+                <div class="input-group mb-3" style="max-width: 500px;">
+                    <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" class="form-control" placeholder="Rechercher un produit..." aria-label="Rechercher un produit" aria-describedby="button-search">
+                    <button class="btn btn-primary" type="submit" id="button-search">Rechercher</button>
+                    @if (ViewData["CurrentFilter"] != null)
+                    {
+                        <a asp-action="IndexClient" class="btn btn-outline-light ms-2">Tout afficher</a>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
+</header>
+
+<section class="py-5">
+    <div class="container px-4 px-lg-5 mt-5">
+        <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
+            @foreach (var item in Model)
+            {
+                <div class="col mb-5">
+                    <div class="card h-100">
+                        <!-- Product image-->
+                        <img class="card-img-top" src="@item.ImagePath" alt="@item.Nom" style="height: 200px; object-fit: cover;" />
+                        <!-- Product details-->
+                        <div class="card-body p-4">
+                            <div class="text-center">
+                                <!-- Product name-->
+                                <h5 class="fw-bolder">@item.Nom</h5>
+                                <!-- Product review-->
+                                <div class="d-flex justify-content-center small text-warning mb-2">
+                                    <div class="bi-star-fill"></div>
+                                    <div class="bi-star-fill"></div>
+                                    <div class="bi-star-fill"></div>
+                                    <div class="bi-star-fill"></div>
+                                    <div class="bi-star-fill"></div>
+                                </div>
+                                <!-- Product price-->
+                                @item.Prix.ToString("C")
+                            </div>
+                        </div>
+                        <!-- Product actions-->
+                        <div class="card-footer p-4 pt-0 border-top-0 bg-transparent">
+                            <div class="text-center d-flex justify-content-center gap-2">
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info mt-auto">Voir</a>
+                                <a asp-controller="Cart" asp-action="AddToCart" asp-route-productId="@item.Id" asp-route-quantity="1" class="btn btn-outline-dark mt-auto">Ajouter au panier</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<link rel="stylesheet" href="~/css/chatbot.css" />
+
+<!-- Bouton du chatbot -->
+<div id="chatbot-toggle" class="chatbot-toggle">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+        <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
+        <path d="M6 12h12v2H6zm0-3h12v2H6zm0-3h12v2H6z"/>
+    </svg>
+</div>
+
+<!-- Fenêtre de chat -->
+<div id="chatbot-window" class="chatbot-window">
+    <div class="chatbot-header">
+        <h3>Conseiller Beauté</h3>
+        <button id="chatbot-close" class="chatbot-close">&times;</button>
+    </div>
+    
+    <div id="chatbot-messages" class="chatbot-messages">
+        <!-- Messages apparaîtront ici -->
+    </div>
+    
+    <div class="chatbot-input">
+        <input 
+            type="text" 
+            id="chatbot-input" 
+            placeholder="Décrivez votre peau ou posez une question..."
+            autocomplete="off"
+        >
+        <button id="chatbot-send">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<script>
+    // Integration avec les vraies données (TEST DEBUG)
+    const realProducts = [];
+
+    // Base de connaissances enrichie
+    const productKnowledgeBase = {
+        products: realProducts,
+        categories: {
+            "promotions": {
+                keywords: ["promo", "promotion", "réduction", "solde", "offre", "rabais", "bon plan", "moins cher"],
+                response: "🔥 Voici nos offres spéciales du moment :",
+                action: "showPromotions"
+            },
+            
+            "types_peau": {
+                keywords: ["peau", "type de peau", "peau sensible", "acnéique", "grasse", "sèche", "mixte", "normale", "atopique"],
+                response: "Je peux vous recommander des produits adaptés à votre type de peau. Quel est votre type de peau ?",
+                action: "askSkinTypeDetails"
+            },
+            
+            "problèmes_peau": {
+                keywords: ["acné", "boutons", "points noirs", "imperfections", "rougeurs", "irritation", "démangeaisons", "tiraillements", "brillances"],
+                response: "Nous avons des solutions spécifiques pour ces problèmes. Pouvez-vous préciser ?",
+                action: "askSkinProblemDetails"
+            },
+            
+            "routine": {
+                keywords: ["routine", "soin", "étapes", "nettoyage", "hydratation", "crème", "sérum", "masque", "exfoliation"],
+                response: "Je peux vous aider à établir une routine adaptée. Quel est votre objectif principal ?",
+                action: "askRoutineGoal"
+            },
+            
+            "ingrédients": {
+                keywords: ["ingrédient", "composition", "actif", "acide hyaluronique", "niacinamide", "rétinol", "vitamine C", "salicylique", "ceramides"],
+                response: "Je peux vous conseiller sur les actifs. Quel ingrédient vous intéresse ?",
+                action: "explainIngredient"
+            },
+            
+            "marques": {
+                keywords: ["marque", "brand", "la roche-posay", "avène", "cetaphil", "bioderma", "vichy", "caudalie", "cerave"],
+                response: "Voici nos marques phares :",
+                action: "showBrands"
+            },
+            
+            "avis": {
+                keywords: ["avis", "test", "commentaire", "note", "évaluation", "retour", "expérience"],
+                response: "Nos produits les mieux notés :",
+                action: "showTopRated"
+            },
+            
+            "nouveautés": {
+                keywords: ["nouveau", "nouveauté", "récent", "sortie", "dernière collection", "inédit"],
+                response: "🎉 Découvrez nos dernières nouveautés :",
+                action: "showNewArrivals"
+            },
+            
+            "budget": {
+                keywords: ["budget", "prix", "coût", "cher", "abordables", "économique", "luxe", "premium", "entrée de gamme"],
+                response: "Nous avons des options pour tous les budgets. Quel est votre fourchette de prix ?",
+                action: "askBudgetRange"
+            },
+            
+            "livraison": {
+                keywords: ["livraison", "transport", "délai", "gratuit", "express", "frais de port", "suivi", "expédition"],
+                response: "📦 Informations sur la livraison :",
+                action: "showDeliveryInfo"
+            },
+            
+            "paiement": {
+                keywords: ["paiement", "payer", "carte", "virement", "paypal", "espèces", "sécurisé", "transaction"],
+                response: "💳 Informations sur le paiement :",
+                action: "showPaymentInfo"
+            },
+            
+            "retour": {
+                keywords: ["retour", "remboursement", "échange", "garantie", "satisfaction", "politique retour"],
+                response: "🔄 Politique de retour et remboursement :",
+                action: "showReturnPolicy"
+            },
+            
+            "contact": {
+                keywords: ["contact", "téléphone", "email", "support", "aide", "service client", "nous contacter"],
+                response: "📞 Comment nous contacter :",
+                action: "showContact"
+            },
+            
+            "conseil_expert": {
+                keywords: ["conseil", "expert", "dermatologue", "spécialiste", "consultation", "avis professionnel"],
+                response: "👨‍⚕️ Services de conseil expert :",
+                action: "showExpertServices"
+            },
+            
+            "allergie": {
+                keywords: ["allergie", "allergique", "sensibilité", "intolérance", "réaction", "hypoallergénique"],
+                response: "⚠️ Produits hypoallergéniques :",
+                action: "showHypoallergenicProducts"
+            },
+            
+            "age": {
+                keywords: ["enfant", "bébé", "ado", "adolescent", "âge", "enfants", "jeune", "mature", "anti-âge"],
+                response: "👶 Produits adaptés à votre âge :",
+                action: "showAgeAppropriateProducts"
+            },
+            
+            "homme_femme": {
+                keywords: ["homme", "femme", "hommes", "femmes", "masculin", "féminin", "spécifique"],
+                response: "👥 Produits spécifiques :",
+                action: "showGenderSpecific"
+            }
+        },
+        
+        skinTypes: {
+            "sensible": {
+                description: "Peau qui réagit facilement (rougeurs, picotements)",
+                recommendations: ["Produits sans parfum", "Soins apaisants", "Texture légère"],
+                products:  realProducts.slice(0, 3).map(p => p.id) // Fallback dynamique
+            },
+            "acnéique": {
+                description: "Peau à tendance acnéique avec imperfections",
+                recommendations: ["Nettoyants purifiants", "Soins non comédogènes", "Actifs anti-imperfections"],
+                products: realProducts.slice(0, 3).map(p => p.id)
+            },
+            "grasse": {
+                description: "Peau qui brille avec pores dilatés",
+                recommendations: ["Gels nettoyants", "Textures matifiantes", "Contrôle sébum"],
+                products: realProducts.slice(0, 3).map(p => p.id)
+            },
+            "sèche": {
+                description: "Peau qui tiraille, manque de confort",
+                recommendations: ["Crèmes riches", "Soins nourrissants", "Actifs hydratants"],
+                products: realProducts.slice(0, 3).map(p => p.id)
+            },
+            "mixte": {
+                description: "Zone T grasse, joues sèches",
+                recommendations: ["Soins équilibrants", "Textures fluides", "Zoning possible"],
+                products: realProducts.slice(0, 3).map(p => p.id)
+            },
+            "normale": {
+                description: "Peau équilibrée sans problème majeur",
+                recommendations: ["Soins d'entretien", "Prévention", "Confort quotidien"],
+                products: realProducts.slice(0, 3).map(p => p.id)
+            }
+        },
+        
+        skinProblems: {
+            "acné": {
+                severity: ["légère", "modérée", "sévère"],
+                solutions: ["Nettoyant salicylique", "Sérum niacinamide", "Crème non comédogène"]
+            },
+            "rougeurs": {
+                causes: ["couperose", "rosacée", "sensibilité"],
+                solutions: ["Soins apaisants", "Actifs anti-rougeurs", "Protection SPF"]
+            },
+            "déshydratation": {
+                symptoms: ["tiraillements", "desquamation", "inconfort"],
+                solutions: ["Acide hyaluronique", "Crèmes hydratantes", "Masques intensifs"]
+            },
+            "signes_age": {
+                types: ["rides", "ridules", "perte fermeté", "taches"],
+                solutions: ["Rétinol", "Vitamine C", "Peptides", "SPF quotidien"]
+            },
+            "pores_dilatés": {
+                causes: ["excès sébum", "manque exfoliation"],
+                solutions: ["Exfoliants chimiques", "Argile purifiante", "Sérums matifiants"]
+            }
+        },
+        
+        routineSteps: {
+            "matin": ["Nettoyage doux", "Sérum antioxydant", "Crème hydratante SPF"],
+            "soir": ["Démaquillage", "Nettoyage", "Sérum traitement", "Crème de nuit"],
+            "hebdomadaire": ["Exfoliation 1-2x/semaine", "Masque traitement", "Soin contour yeux"]
+        },
+        
+        serviceInfo: {
+            "delivery": {
+                title: "📦 Livraison",
+                content: "✅ Livraison gratuite à partir de 50€\n✅ Livraison express 24-48h\n✅ Suivi de colis en temps réel\n✅ Emballage sécurisé et discret",
+                icon: "📦"
+            },
+            "payment": {
+                title: "💳 Paiement Sécurisé",
+                content: "✅ Carte bancaire (Visa, Mastercard, Amex)\n✅ Paiement en ligne sécurisé (SSL)\n✅ Paiement à la livraison possible\n✅ Paiement par virement bancaire",
+                icon: "💳"
+            },
+            "return": {
+                title: "🔄 Politique de Retour",
+                content: "✅ Retour gratuit sous 30 jours\n✅ Remboursement rapide (5-7 jours)\n✅ Échange possible\n✅ Garantie produits neuf et scellé",
+                icon: "🔄"
+            },
+            "contact": {
+                title: "📞 Service Client",
+                content: "📧 Email: contact@pharmacare.fr\n📱 Téléphone: +33 1 XX XX XX XX\n💬 Chat en ligne disponible\n⏰ Lundi-Vendredi 9h-18h, Samedi 10h-16h",
+                icon: "📞"
+            },
+            "expert": {
+                title: "👨‍⚕️ Conseils Experts",
+                content: "✅ Consultations gratuites avec nos experts\n✅ Recommandations personnalisées\n✅ Diagnostic de peau en ligne\n✅ Suivi de votre routine",
+                icon: "👨‍⚕️"
+            },
+            "hypoallergenic": {
+                title: "⚠️ Produits Hypoallergéniques",
+                content: "✅ Produits testés dermatologiquement\n✅ Sans parfum synthétique\n✅ Sans colorant artificiel\n✅ Adapté aux peaux sensibles et réactives",
+                icon: "⚠️"
+            }
+        }
+    };
+
+    // Classe Chatbot améliorée
+    class EnhancedChatbotAI {
+        constructor() {
+            this.context = {
+                currentCategory: null,
+                userPreferences: {},
+                conversationHistory: []
+            };
+        }
+
+        processMessage(message) {
+            const lowerMessage = message.toLowerCase();
+            this.context.conversationHistory.push({ type: 'user', content: message });
+            
+            // Vérifier les salutations
+            if (this.isGreeting(lowerMessage)) {
+                return this.getGreetingResponse();
+            }
+            
+            // Vérifier les remerciements
+            if (this.isThankYou(lowerMessage)) {
+                return this.getThankYouResponse();
+            }
+            
+            // Analyser l'intention
+            const intent = this.analyzeIntent(lowerMessage);
+            
+            // Générer la réponse
+            return this.generateResponse(intent, message);
+        }
+
+        isGreeting(message) {
+            const greetings = ['bonjour', 'salut', 'coucou', 'hello', 'hi', 'bonsoir'];
+            return greetings.some(greet => message.includes(greet));
+        }
+
+        isThankYou(message) {
+            const thanks = ['merci', 'thanks', 'super', 'parfait', 'génial', 'ok'];
+            return thanks.some(thank => message.includes(thank));
+        }
+
+        analyzeIntent(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            // Détection services
+            if (this.isServiceQuestion(lowerMessage)) {
+                const serviceType = this.extractServiceType(lowerMessage);
+                if (serviceType) {
+                    return { type: 'service', service: serviceType };
+                }
+            }
+            
+            // Détection peau
+            if (this.isSkinTypeQuestion(lowerMessage)) {
+                return { type: 'skin_type', details: this.extractSkinType(lowerMessage) };
+            }
+            
+            // Détection problèmes
+            if (this.isSkinProblemQuestion(lowerMessage)) {
+                return { type: 'skin_problem', details: this.extractSkinProblem(lowerMessage) };
+            }
+            
+            // Détection routine
+            if (this.isRoutineQuestion(lowerMessage)) {
+                return { type: 'routine', details: this.extractRoutineGoal(lowerMessage) };
+            }
+            
+            // Recherche dans les catégories
+            for (const [category, data] of Object.entries(productKnowledgeBase.categories)) {
+                if (data.keywords.some(keyword => lowerMessage.includes(keyword))) {
+                    return { type: 'category', category, data };
+                }
+            }
+            
+            // Recherche produit spécifique
+            const productMatch = productKnowledgeBase.products.find(product => 
+                lowerMessage.includes(product.name.toLowerCase())
+            );
+            
+            if (productMatch) {
+                return { type: 'product', product: productMatch };
+            }
+            
+            return { type: 'unknown' };
+        }
+        
+        isSkinTypeQuestion(message) {
+            const skinTypePatterns = [
+                /(ma|j'ai une) peau (sensible|acnéique|grasse|sèche|mixte|normale)/i,
+                /(je suis|j'ai) (peau sensible|peau acnéique|peau grasse|peau sèche)/i,
+                /(type de peau|nature de peau|quelle peau)/i,
+                /(recommand).* (peau sensible|acnéique|grasse|sèche)/i
+            ];
+            return skinTypePatterns.some(pattern => pattern.test(message));
+        }
+        
+        extractSkinType(message) {
+            const skinTypes = Object.keys(productKnowledgeBase.skinTypes);
+            for (const type of skinTypes) {
+                if (message.includes(type)) {
+                    return type;
+                }
+            }
+            return null;
+        }
+        
+        isSkinProblemQuestion(message) {
+            const problemPatterns = [
+                /(j'ai|avec) (acné|boutons|points noirs|imperfections)/i,
+                /(rougeurs|irritations|démangeaisons)/i,
+                /(peau qui brille|excès de sébum)/i,
+                /(tiraillements|dessèchement)/i,
+                /(rides|ridules|vieillissement)/i
+            ];
+            return problemPatterns.some(pattern => pattern.test(message));
+        }
+        
+        extractSkinProblem(message) {
+            const problems = Object.keys(productKnowledgeBase.skinProblems);
+            for (const problem of problems) {
+                if (message.includes(problem)) {
+                    return problem;
+                }
+            }
+            return null;
+        }
+        
+        isRoutineQuestion(message) {
+            const routinePatterns = [
+                /(routine|soins) (visage|peau)/i,
+                /(étapes|comment faire|appliquer)/i,
+                /(nettoyer|démaquiller|hydrater)/i,
+                /(matin|soir|jour|nuit)/i
+            ];
+            return routinePatterns.some(pattern => pattern.test(message));
+        }
+        
+        extractRoutineGoal(message) {
+            if (message.includes("matin")) return "matin";
+            if (message.includes("soir") || message.includes("nuit")) return "soir";
+            if (message.includes("base") || message.includes("débutant")) return "base";
+            return "complete";
+        }
+
+        isServiceQuestion(message) {
+            const servicePatterns = [
+                /(livraison|transport|délai)/i,
+                /(paiement|payer|carte)/i,
+                /(retour|remboursement|échange)/i,
+                /(contact|téléphone|email|support)/i,
+                /(conseil|expert|dermatologue)/i,
+                /(allergie|sensibilité|hypoallergénique)/i,
+                /(frais de port|gratuit|express)/i
+            ];
+            return servicePatterns.some(pattern => pattern.test(message));
+        }
+
+        extractServiceType(message) {
+            const lowerMessage = message.toLowerCase();
+            if (lowerMessage.includes("livraison") || lowerMessage.includes("transport")) return "livraison";
+            if (lowerMessage.includes("paiement") || lowerMessage.includes("payer")) return "paiement";
+            if (lowerMessage.includes("retour") || lowerMessage.includes("remboursement")) return "retour";
+            if (lowerMessage.includes("contact") || lowerMessage.includes("téléphone")) return "contact";
+            if (lowerMessage.includes("conseil") || lowerMessage.includes("expert")) return "conseil_expert";
+            if (lowerMessage.includes("allergie") || lowerMessage.includes("sensibilité")) return "allergie";
+            return null;
+        }
+
+        generateResponse(intent, originalMessage) {
+            switch (intent.type) {
+                case 'service':
+                    return this.generateServiceResponse(intent.service);
+                    
+                case 'skin_type':
+                    return this.generateSkinTypeResponse(intent.details);
+                    
+                case 'skin_problem':
+                    return this.generateSkinProblemResponse(intent.details);
+                    
+                case 'routine':
+                    return this.generateRoutineResponse(intent.details);
+                    
+                case 'category':
+                    this.context.currentCategory = intent.category;
+                    return this.generateCategoryResponse(intent.category);
+                    
+                case 'product':
+                    return this.generateProductResponse(intent.product);
+                    
+                default:
+                    return this.generateFallbackResponse();
+            }
+        }
+        
+        generateServiceResponse(serviceType) {
+            const serviceInfo = productKnowledgeBase.serviceInfo[serviceType];
+            if (!serviceInfo) {
+                return this.generateFallbackResponse();
+            }
+            
+            return {
+                text: `**${serviceInfo.title}**\n\n${serviceInfo.content}`,
+                quickReplies: [
+                    { text: "📦 Livraison", query: "livraison" },
+                    { text: "💳 Paiement", query: "paiement" },
+                    { text: "🔄 Retours", query: "retour" },
+                    { text: "📞 Contact", query: "contact" }
+                ]
+            };
+        }
+        
+        generateSkinTypeResponse(skinType) {
+            const skinInfo = productKnowledgeBase.skinTypes[skinType];
+            if (!skinType) {
+                return {
+                    text: "Quel est votre type de peau ? Je peux vous recommander des produits adaptés.",
+                    quickReplies: [
+                        { text: "👁️ Peau sensible", query: "je suis sensible" },
+                        { text: "⚡ Peau acnéique", query: "peau à imperfections" },
+                        { text: "✨ Peau grasse", query: "peau qui brille" },
+                        { text: "💧 Peau sèche", query: "peau qui tiraille" }
+                    ]
+                };
+            }
+            
+            if (!skinInfo) {
+                return {
+                    text: `Pour la peau ${skinType}, je vous recommande :`,
+                    quickReplies: [
+                        { text: "🧴 Produits adaptés", query: `produits peau ${skinType}` },
+                        { text: "💡 Routine conseillée", query: `routine ${skinType}` }
+                    ]
+                };
+            }
+            
+            const recommendedProducts = productKnowledgeBase.products
+                .filter(p => skinInfo.products.includes(p.id))
+                .slice(0, 3);
+            
+            return {
+                text: `**Pour la peau ${skinType} :**\n\n${skinInfo.description}\n\n**Mes recommandations :**\n${skinInfo.recommendations.join(', ')}`,
+                products: recommendedProducts,
+                quickReplies: [
+                    { text: "🛒 Voir ces produits", query: `produits pour peau ${skinType}` },
+                    { text: "💡 Routine conseillée", query: `routine peau ${skinType}` },
+                    { text: "🎯 Autres conseils", query: "conseils personnalisés" }
+                ]
+            };
+        }
+        
+        generateSkinProblemResponse(problem) {
+            const problemInfo = productKnowledgeBase.skinProblems[problem];
+            if (!problem) {
+                return {
+                    text: "Quel problème cutané rencontrez-vous ?",
+                    quickReplies: [
+                        { text: "🎭 Acné/imperfections", query: "j'ai des boutons" },
+                        { text: "🔴 Rougeurs/sensibilité", query: "rougeurs visage" },
+                        { text: "💦 Déshydratation", query: "peau très sèche" },
+                        { text: "⏳ Signes de l'âge", query: "premiers signes âge" }
+                    ]
+                };
+            }
+            
+            if (!problemInfo) {
+                return {
+                    text: `Pour ${problem}, nous avons plusieurs solutions.`,
+                    quickReplies: [
+                        { text: "📋 Voir les solutions", query: `solutions ${problem}` },
+                        { text: "🧴 Produits adaptés", query: `produits ${problem}` }
+                    ]
+                };
+            }
+            
+            return {
+                text: `**Pour ${problem} :**\n\nSolutions recommandées :\n${problemInfo.solutions.join('\n')}`,
+                quickReplies: [
+                    { text: "🛒 Produits spécifiques", query: `produits pour ${problem}` },
+                    { text: "🔄 Routine complète", query: `routine ${problem}` },
+                    { text: "👨‍⚕️ Conseils experts", query: "conseil expert" }
+                ]
+            };
+        }
+        
+        generateRoutineResponse(routineType) {
+            const steps = productKnowledgeBase.routineSteps[routineType] || 
+                          productKnowledgeBase.routineSteps.matin;
+            
+            return {
+                text: `**Routine ${routineType} :**\n\n${steps.map((step, i) => `${i+1}. ${step}`).join('\n')}`,
+                quickReplies: [
+                    { text: "🧴 Produits par étape", query: `produits routine ${routineType}` },
+                    { text: "⏰ Routine soir", query: "routine soir" },
+                    { text: "📅 Routine hebdo", query: "routine hebdomadaire" }
+                ]
+            };
+        }
+        
+        generateCategoryResponse(category) {
+            const categoryInfo = productKnowledgeBase.categories[category];
+            const response = {
+                text: categoryInfo.response,
+                action: categoryInfo.action
+            };
+            
+            switch(category) {
+                case 'types_peau':
+                    response.quickReplies = [
+                        { text: "👁️ Peau sensible", query: "peau sensible" },
+                        { text: "⚡ Peau acnéique", query: "peau acnéique" },
+                        { text: "✨ Peau grasse", query: "peau grasse" },
+                        { text: "💧 Peau sèche", query: "peau sèche" }
+                    ];
+                    break;
+                    
+                case 'problèmes_peau':
+                    response.quickReplies = [
+                        { text: "🎭 Acné", query: "acné" },
+                        { text: "🔴 Rougeurs", query: "rougeurs" },
+                        { text: "💦 Sécheresse", query: "peau sèche" },
+                        { text: "⏳ Rides", query: "rides" }
+                    ];
+                    break;
+                    
+                case 'routine':
+                    response.quickReplies = [
+                        { text: "🌅 Routine matin", query: "routine matin" },
+                        { text: "🌙 Routine soir", query: "routine soir" },
+                        { text: "🧖 Soins hebdo", query: "soins hebdomadaires" }
+                    ];
+                    break;
+                    
+                case 'promotions':
+                    const promoProducts = productKnowledgeBase.products.filter(p => p.promo);
+                    response.products = promoProducts.slice(0, 3);
+                    response.quickReplies = [
+                        { text: "🛒 Voir toutes les promos", query: "toutes promotions" },
+                        { text: "⭐ Meilleures ventes", query: "best sellers" }
+                    ];
+                    break;
+                
+                case 'livraison':
+                    response.text = productKnowledgeBase.serviceInfo.delivery.content;
+                    response.quickReplies = [
+                        { text: "💳 Paiement", query: "paiement" },
+                        { text: "🔄 Retours", query: "retour" },
+                        { text: "📞 Contact", query: "contact" }
+                    ];
+                    break;
+                    
+                case 'paiement':
+                    response.text = productKnowledgeBase.serviceInfo.payment.content;
+                    response.quickReplies = [
+                        { text: "📦 Livraison", query: "livraison" },
+                        { text: "🔄 Retours", query: "retour" },
+                        { text: "📞 Support", query: "contact" }
+                    ];
+                    break;
+                    
+                case 'retour':
+                    response.text = productKnowledgeBase.serviceInfo.return.content;
+                    response.quickReplies = [
+                        { text: "📦 Livraison", query: "livraison" },
+                        { text: "💳 Paiement", query: "paiement" },
+                        { text: "📞 Questions", query: "contact" }
+                    ];
+                    break;
+                    
+                case 'contact':
+                    response.text = productKnowledgeBase.serviceInfo.contact.content;
+                    response.quickReplies = [
+                        { text: "📦 Livraison", query: "livraison" },
+                        { text: "🔄 Retours", query: "retour" },
+                        { text: "💳 Paiement", query: "paiement" }
+                    ];
+                    break;
+                    
+                case 'conseil_expert':
+                    response.text = productKnowledgeBase.serviceInfo.expert.content;
+                    response.quickReplies = [
+                        { text: "👁️ Diagnostic peau", query: "type de peau" },
+                        { text: "🧴 Routine personnalisée", query: "routine" },
+                        { text: "⚡ Problèmes spécifiques", query: "acné" }
+                    ];
+                    break;
+                    
+                case 'allergie':
+                    response.text = productKnowledgeBase.serviceInfo.hypoallergenic.content;
+                    response.quickReplies = [
+                        { text: "🔎 Chercher produits", query: "produits hypoallergéniques" },
+                        { text: "👨‍⚕️ Conseil expert", query: "conseil expert" },
+                        { text: "📞 Questions", query: "contact" }
+                    ];
+                    break;
+            }
+            
+            return response;
+        }
+        
+        generateProductResponse(product) {
+            return {
+                text: `**${product.name}**\n💰 Prix : ${product.price}€ ${product.promo ? '🔥 PROMO' : ''}\n⭐ Note : ${product.rating}/5`,
+                quickReplies: [
+                    { text: "📖 Détails complets", query: `fiche ${product.name}` },
+                    { text: "🛒 Ajouter au panier", query: `panier ${product.id}` },
+                    { text: "🔎 Similaires", query: `similaires à ${product.name}` }
+                ]
+            };
+        }
+        
+        generateFallbackResponse() {
+            const suggestions = [
+                "Parlez-moi de votre type de peau",
+                "Avez-vous des problèmes cutanés spécifiques ?",
+                "Souhaitez-vous établir une routine ?",
+                "Cherchez-vous des promotions ?",
+                "Besoin d'infos sur la livraison ?",
+                "Des questions sur le paiement ?"
+            ];
+            
+            return {
+                text: `Je peux vous aider avec :\n• 👁️ Diagnostic et conseils peau\n• 🧴 Routines personnalisées\n• 🎯 Problèmes spécifiques\n• 🔥 Promotions\n• 📦 Livraison & retours\n• 💳 Paiement & services\n• 👨‍⚕️ Conseils experts\n\n${suggestions[Math.floor(Math.random() * suggestions.length)]}`,
+                quickReplies: [
+                    { text: "👁️ Diagnostic peau", query: "type de peau" },
+                    { text: "📦 Infos pratiques", query: "livraison" },
+                    { text: "👨‍⚕️ Conseil expert", query: "conseil expert" },
+                    { text: "🔥 Promotions", query: "promotions" }
+                ]
+            };
+        }
+
+        getGreetingResponse() {
+            return {
+                text: "👋 Bonjour ! Je suis votre conseiller beauté virtuel. Je peux vous aider à trouver les produits parfaits pour votre type de peau.\n\nComment puis-je vous aider aujourd'hui ?",
+                quickReplies: [
+                    { text: "👁️ Diagnostic peau", query: "type de peau" },
+                    { text: "⚡ Problème spécifique", query: "acné" },
+                    { text: "🧴 Établir une routine", query: "routine" },
+                    { text: "🔥 Voir les promos", query: "promotions" }
+                ]
+            };
+        }
+
+        getThankYouResponse() {
+            return {
+                text: "Avec plaisir ! 😊 N'hésitez pas si vous avez d'autres questions. Bonne découverte de nos produits !",
+                quickReplies: [
+                    { text: "🔄 Autre question", query: "aide" },
+                    { text: "🛒 Voir le catalogue", query: "catalogue" }
+                ]
+            };
+        }
+    }
+
+    // Initialisation du chatbot
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatbot = new EnhancedChatbotAI();
+        
+        // Éléments DOM
+        const toggleBtn = document.getElementById('chatbot-toggle');
+        const closeBtn = document.getElementById('chatbot-close');
+        const chatWindow = document.getElementById('chatbot-window');
+        const sendBtn = document.getElementById('chatbot-send');
+        const chatInput = document.getElementById('chatbot-input');
+        const messagesContainer = document.getElementById('chatbot-messages');
+        
+        // Variables d'état
+        let isChatOpen = false;
+        
+        // Message de bienvenue initial
+        const welcomeMessages = [
+            "👋 Bonjour ! Je suis votre conseiller beauté virtuel. Je peux vous aider à trouver les produits parfaits pour votre peau.",
+            "🌟 Bienvenue ! Dites-moi votre type de peau ou vos préoccupations, je vous recommanderai les meilleurs produits.",
+            "💫 Salut ! Besoin d'aide pour choisir vos soins ? Je connais tous nos produits sur le bout des doigts !"
+        ];
+        
+        const randomWelcome = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+        
+        // Ajouter le message de bienvenue
+        const welcomeMessage = document.createElement('div');
+        welcomeMessage.className = 'message bot';
+        welcomeMessage.innerHTML = `
+            <div class="message-content">${randomWelcome}</div>
+            <div class="quick-replies">
+                <button class="quick-reply" data-query="Peau sensible">👁️ Peau sensible</button>
+                <button class="quick-reply" data-query="Acné">⚡ Imperfections</button>
+                <button class="quick-reply" data-query="Routine">🧴 Routine</button>
+                <button class="quick-reply" data-query="Livraison">📦 Infos pratiques</button>
+            </div>
+        `;
+        messagesContainer.appendChild(welcomeMessage);
+        
+        // Ouvrir/fermer le chat
+        toggleBtn.addEventListener('click', () => {
+            isChatOpen = !isChatOpen;
+            chatWindow.style.display = isChatOpen ? 'flex' : 'none';
+            if (isChatOpen) {
+                chatInput.focus();
+                scrollToBottom();
+            }
+        });
+        
+        closeBtn.addEventListener('click', () => {
+            isChatOpen = false;
+            chatWindow.style.display = 'none';
+        });
+        
+        // Envoyer un message
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+            
+            // Ajouter le message utilisateur
+            addMessage(message, 'user');
+            chatInput.value = '';
+            
+            // Simulation de "typing"
+            showTypingIndicator();
+            
+            // Réponse du chatbot
+            setTimeout(() => {
+                removeTypingIndicator();
+                const response = chatbot.processMessage(message);
+                displayBotResponse(response);
+            }, 800);
+        }
+        
+        // Événements d'envoi
+        sendBtn.addEventListener('click', sendMessage);
+        
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        
+        // Réponses rapides
+        messagesContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('quick-reply')) {
+                const query = e.target.dataset.query;
+                addMessage(query, 'user');
+                
+                showTypingIndicator();
+                setTimeout(() => {
+                    removeTypingIndicator();
+                    const response = chatbot.processMessage(query);
+                    displayBotResponse(response);
+                }, 600);
+            }
+        });
+        
+        // Gérer les actions produits
+        function handleProductAction(event) {
+            event.stopPropagation();
+            const productId = event.currentTarget.dataset.id || 
+                            event.currentTarget.closest('.product-card')?.dataset.productId;
+            const action = event.currentTarget.dataset.action || 'view';
+            
+            if (productId) {
+                const product = productKnowledgeBase.products.find(p => p.id == productId);
+                if (product) {
+                    if (action === 'cart') {
+                        // Backend Integration for Cart - Use GET instead of POST
+                        fetch(`/Cart/AddToCart?productId=${productId}&quantity=1`, { method: 'GET' })
+                        .then(res => {
+                             if(res.ok) {
+                                addMessage(`Ajouter "${product.name}" au panier`, 'user');
+                                setTimeout(() => {
+                                    const response = {
+                                        text: `✅ "${product.name}" a été ajouté à votre panier !\nSouhaitez-vous continuer vos achats ?`,
+                                        quickReplies: [
+                                            { text: "🛒 Voir panier", query: "panier" },
+                                            { text: "🔎 Continuer", query: "recommandations" },
+                                            { text: "💳 Commander", query: "commander" }
+                                        ]
+                                    };
+                                    displayBotResponse(response);
+                                    // Update cart badge if needed
+                                    // document.location.reload(); // Simple way to update badge, or fetch count
+                                }, 500);
+                             } else {
+                                console.error("Error adding to cart");
+                             }
+                        });
+
+                    } else {
+                        // Afficher plus de détails
+                        addMessage(`Détails ${product.name}`, 'user');
+                        setTimeout(() => {
+                            const detailedResponse = {
+                                text: `📋 **${product.name}**\n\n💰 Prix : ${product.price}€\n⭐ Note : ${product.rating}/5\n📦 En stock\n\n**Description :**\nProduit de qualité supérieure.\n\n**Conseil d'utilisation :**\nUtiliser quotidiennement.`,
+                                quickReplies: [
+                                    { text: "🛒 Ajouter au panier", query: `panier ${product.id}` },
+                                    { text: "⭐ Favoris", query: `favoris ${product.id}` },
+                                    { text: "🔎 Similaires", query: `similaires ${product.id}` }
+                                ]
+                            };
+                            displayBotResponse(detailedResponse);
+                        }, 500);
+                    }
+                }
+            }
+        }
+        
+        // Fonctions d'affichage
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.innerHTML = `
+                <div class="message-content">${text}</div>
+            `;
+            messagesContainer.appendChild(messageDiv);
+            scrollToBottom();
+        }
+        
+        function displayBotResponse(response) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            
+            let contentHTML = `<div class="message-content">${response.text.replace(/\n/g, '<br>')}</div>`;
+            
+            // Ajouter les produits
+            if (response.products && response.products.length > 0) {
+                contentHTML += `
+                    <div class="message-with-products">
+                        ${response.products.map(product => `
+                            <div class="product-card" data-product-id="${product.id}">
+                                <h4>${product.name} ${product.promo ? '<span class="badge">PROMO</span>' : ''}</h4>
+                                <div class="price">${product.price}€</div>
+                                <div class="rating">⭐ ${product.rating}/5</div>
+                                <div class="action-buttons">
+                                    <button class="action-button" data-action="view" data-id="${product.id}">Voir</button>
+                                    <button class="action-button" data-action="cart" data-id="${product.id}">Panier</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            // Ajouter les quick replies
+            if (response.quickReplies && response.quickReplies.length > 0) {
+                contentHTML += `
+                    <div class="quick-replies">
+                        ${response.quickReplies.map(reply => 
+                            `<button class="quick-reply" data-query="${reply.query || reply.text}">${reply.text}</button>`
+                        ).join('')}
+                    </div>
+                `;
+            }
+            
+            messageDiv.innerHTML = contentHTML;
+            messagesContainer.appendChild(messageDiv);
+            scrollToBottom();
+            
+            // Ajouter les événements aux nouvelles cartes produits
+            messageDiv.querySelectorAll('.action-button').forEach(button => {
+                button.addEventListener('click', handleProductAction);
+            });
+            
+            messageDiv.querySelectorAll('.product-card').forEach(card => {
+                if (!card.querySelector('.action-button')) {
+                    card.addEventListener('click', () => {
+                        const productId = card.dataset.productId;
+                        if (productId) {
+                            chatInput.value = `Détails produit ${productId}`;
+                            sendMessage();
+                        }
+                    });
+                }
+            });
+        }
+        
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot typing';
+            typingDiv.id = 'typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            `;
+            messagesContainer.appendChild(typingDiv);
+            scrollToBottom();
+        }
+        
+        function removeTypingIndicator() {
+            const typingIndicator = document.getElementById('typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+        
+        function scrollToBottom() {
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100);
+        }
+        
+        // Clic sur carte produit
+        messagesContainer.addEventListener('click', (e) => {
+            const productCard = e.target.closest('.product-card');
+            if (productCard && !e.target.closest('.action-button')) {
+                const productId = productCard.dataset.productId;
+                if (productId) {
+                    const product = productKnowledgeBase.products.find(p => p.id == productId);
+                    if (product) {
+                        chatInput.value = product.name;
+                        sendMessage();
+                    }
+                }
+            }
+        });
+        
+        // Focus automatique quand la fenêtre s'ouvre
+        chatWindow.addEventListener('click', () => {
+            chatInput.focus();
+        });
+    });
+</script>

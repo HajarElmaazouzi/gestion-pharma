@@ -1,0 +1,24 @@
+@model gestion_pharma.Models.Entities.Client
+
+@{
+    ViewData["Title"] = "Supprimer client";
+}
+
+<h1>Supprimer client</h1>
+
+<h3>Êtes-vous sûr de vouloir supprimer ce client ?</h3>
+
+<dl class="row">
+    <dt class="col-sm-2">Nom</dt>
+    <dd class="col-sm-10">@Model.Nom @Model.Prenom</dd>
+
+    <dt class="col-sm-2">Email</dt>
+    <dd class="col-sm-10">@Model.Email</dd>
+</dl>
+
+<form asp-action="Delete" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <button type="submit" class="btn btn-danger">Supprimer</button>
+    <a asp-action="Index" class="btn btn-secondary">Annuler</a>
+</form>

@@ -1,0 +1,73 @@
+@model gestion_pharma.Models.Entities.PaiementEnLigne
+
+@{ ViewData["Title"] = "Paiement en Ligne"; }
+
+<div class="container mt-5 d-flex justify-content-center">
+    <div class="card p-4 shadow-lg" style="width: 500px; border-radius: 15px;">
+        <div class="card-header bg-primary text-white text-center rounded-top"><h5><i class="bi bi-credit-card-2-front"></i> Paiement Sécurisé</h5></div>
+        <div class="card-body">
+            <h4 class="text-center mb-4">Total à payer : <span class="text-success fw-bold">@Model.Montant.ToString("C")</span></h4>
+            <form id="paymentForm">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <input type="hidden" id="CommandeId" value="@Model.CommandeId" />
+                <input type="hidden" id="Price" value="@Model.Price" />
+                <input type="hidden" id="Montant" value="@Model.Montant" />
+
+                <div class="mb-3"><label class="form-label">Nom sur la carte</label><input id="CardHolder" name="CardHolder" type="text" class="form-control" placeholder="M. Jean Dupont" required /></div>
+                <div class="mb-3"><label class="form-label">Numéro de Carte</label><input id="CardNumber" name="CardNumber" type="text" class="form-control" placeholder="0000 0000 0000 0000" maxlength="19" required /></div>
+                <div class="row">
+                    <div class="col-6 mb-3"><label class="form-label">Expiration</label><input id="CardExpiry" name="CardExpiry" type="text" class="form-control" placeholder="MM/AA" maxlength="5" required /></div>
+                    <div class="col-6 mb-3"><label class="form-label">CVV</label><input id="CardCvv" name="CardCvv" type="text" class="form-control" placeholder="123" maxlength="4" required /></div>
+                </div>
+
+                <button id="payButton" type="submit" class="btn btn-success w-100 py-2 mt-2 fw-bold">Payer Maintenant</button>
+                <div id="paymentStatus" class="mt-3 text-center" style="display:none;"></div>
+            </form>
+
+            <script>
+                document.getElementById('paymentForm').addEventListener('submit', async function (e) {
+                    e.preventDefault();
+                    var btn = document.getElementById('payButton');
+                    btn.disabled = true;
+                    btn.innerText = 'Traitement...';
+                    var status = document.getElementById('paymentStatus');
+                    status.style.display = 'none';
+
+                    var payload = {
+                        CommandeId: parseInt(document.getElementById('CommandeId').value),
+                        Montant: parseFloat(document.getElementById('Montant').value),
+                        CardNumber: document.getElementById('CardNumber').value,
+                        CardHolder: document.getElementById('CardHolder').value,
+                        Expiry: document.getElementById('CardExpiry').value,
+                        Cvv: document.getElementById('CardCvv').value
+                    };
+
+                    try {
+                        var resp = await fetch('/api/payments/process', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        var data = await resp.json();
+                        if (resp.ok && data.success) {
+                            window.location.href = '/Paiements/Success?id=' + data.id;
+                        } else {
+                            status.style.display = 'block';
+                            status.className = 'text-danger';
+                            status.innerText = (data && data.message) ? data.message : 'Erreur lors du paiement.';
+                            btn.disabled = false;
+                            btn.innerText = 'Payer Maintenant';
+                        }
+                    } catch (err) {
+                        status.style.display = 'block';
+                        status.className = 'text-danger';
+                        status.innerText = 'Erreur réseau. Réessayez.';
+                        btn.disabled = false;
+                        btn.innerText = 'Payer Maintenant';
+                    }
+                });
+            </script>
+        </div>
+        <div class="card-footer text-center text-muted small"><i class="bi bi-lock-fill"></i> Transaction sécurisée par SSL</div>
+    </div>
+</div>

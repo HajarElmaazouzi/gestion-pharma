@@ -1,0 +1,43 @@
+@model IEnumerable<gestion_pharma.Models.Entities.Parapharmacien>
+
+@{
+    ViewData["Title"] = "Parapharmaciens";
+}
+
+<h1>Parapharmaciens</h1>
+
+<p>
+    <a class="btn btn-primary" asp-action="Create">Créer un parapharmacien</a>
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th>Email</th>
+            <th>Téléphone</th>
+            <th>Créé le</th>
+            <th>Actif</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model)
+{
+        <tr>
+            <td>@item.Nom</td>
+            <td>@item.Prenom</td>
+            <td>@item.Email</td>
+            <td>@item.Telephone</td>
+            <td>@item.CreatedAt.ToLocalTime().ToString("g")</td>
+            <td>@(item.IsActive ? "Oui" : "Non")</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@item.Id">Détails</a> |
+                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">Supprimer</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

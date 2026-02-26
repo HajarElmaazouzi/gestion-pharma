@@ -1,0 +1,49 @@
+@{
+    ViewData["Title"] = "Espace Parapharmacien";
+}
+
+<h1>Espace Parapharmacien</h1>
+<p>Bienvenue dans votre espace de gestion.</p>
+
+@if (ViewBag.LowStockCount != null && ViewBag.LowStockCount > 0)
+{
+    <div class="alert alert-warning" role="alert">
+        <h4 class="alert-heading">Stock Faible !</h4>
+        <p>Il y a <strong>@ViewBag.LowStockCount</strong> produit(s) avec un stock inférieur à 10.</p>
+        <hr>
+        <a asp-controller="Produits" asp-action="Index" class="mb-0 alert-link">Gérer le stock des produits</a>
+    </div>
+}
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-header">Produits</div>
+            <div class="card-body">
+                <h5 class="card-title">Gérer les Produits</h5>
+                <p class="card-text">Ajouter, modifier ou supprimer des produits du catalogue. Mettre à jour les stocks.</p>
+                <a asp-controller="Produits" asp-action="Index" class="btn btn-light">Accéder</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-secondary mb-3">
+            <div class="card-header">Fournisseurs</div>
+            <div class="card-body">
+                <h5 class="card-title">Gérer les Fournisseurs</h5>
+                <p class="card-text">Gérer la liste des fournisseurs partenaires.</p>
+                <a asp-controller="Fournisseurs" asp-action="Index" class="btn btn-light">Accéder</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Catégories</div>
+            <div class="card-body">
+                <h5 class="card-title">Gérer les Catégories</h5>
+                <p class="card-text">Créer et modifier les catégories de produits.</p>
+                <a asp-controller="Categories" asp-action="Index" class="btn btn-light">Accéder</a>
+            </div>
+        </div>
+    </div>
+</div>

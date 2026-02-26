@@ -1,0 +1,32 @@
+@model gestion_pharma.Models.Entities.Parapharmacien
+
+@{
+    ViewData["Title"] = "Détails parapharmacien";
+}
+
+<h1>Détails</h1>
+
+<dl class="row">
+    <dt class="col-sm-2">Nom</dt>
+    <dd class="col-sm-10">@Model.Nom</dd>
+
+    <dt class="col-sm-2">Prénom</dt>
+    <dd class="col-sm-10">@Model.Prenom</dd>
+
+    <dt class="col-sm-2">Email</dt>
+    <dd class="col-sm-10">@Model.Email</dd>
+
+    <dt class="col-sm-2">Téléphone</dt>
+    <dd class="col-sm-10">@Model.Telephone</dd>
+
+    <dt class="col-sm-2">Créé le</dt>
+    <dd class="col-sm-10">@Model.CreatedAt.ToLocalTime().ToString("g")</dd>
+
+    <dt class="col-sm-2">Actif</dt>
+    <dd class="col-sm-10">@(Model.IsActive ? "Oui" : "Non")</dd>
+</dl>
+
+<p>
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Edit</a>
+    <a asp-action="Index" class="btn btn-secondary">Retour</a>
+</p>

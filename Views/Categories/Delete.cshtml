@@ -1,0 +1,94 @@
+@model gestion_pharma.Models.Entities.Categorie
+
+@{
+    ViewData["Title"] = "Supprimer la catégorie";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-danger shadow-lg">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-trash-alt me-2"></i>Confirmation de Suppression</h4>
+                </div>
+                <div class="card-body">
+                    @{
+                        var productsCount = ViewBag.ProductsCount as int? ?? 0;
+                    }
+
+                    @if (productsCount > 0)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <h5 class="alert-heading"><i class="fas fa-exclamation-circle me-2"></i>Attention</h5>
+                            <p class="mb-0">
+                                Cette catégorie contient <strong>@productsCount produit(s)</strong>. 
+                                <br/><br/>
+                                Veuillez d'abord réaffecter ou supprimer ces produits avant de supprimer cette catégorie.
+                            </p>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="mb-4">Êtes-vous certain de vouloir supprimer cette catégorie ? Cette action est irréversible.</p>
+
+                        <h5 class="mb-3">Détails de la catégorie :</h5>
+                        <div class="row mb-3">
+                            <div class="col-sm-4 fw-bold text-muted">Nom :</div>
+                            <div class="col-sm-8">@Html.DisplayFor(model => model.Nom)</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4 fw-bold text-muted">Description :</div>
+                            <div class="col-sm-8">@Html.DisplayFor(model => model.Description)</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4 fw-bold text-muted">Créée le :</div>
+                            <div class="col-sm-8">@Html.DisplayFor(model => model.CreatedAt)</div>
+                        </div>
+                        <div class="row mb-4">
+                            <div class="col-sm-4 fw-bold text-muted">Active :</div>
+                            <div class="col-sm-8">
+                                @if (Model.IsActive)
+                                {
+                                    <span class="badge bg-success"><i class="fas fa-check me-1"></i>Oui</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary"><i class="fas fa-times me-1"></i>Non</span>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="d-flex gap-2">
+                        @if (productsCount > 0)
+                        {
+                            <button type="button" class="btn btn-danger btn-lg" disabled>
+                                <i class="fas fa-trash-alt me-2"></i>Supprimer (Impossible)
+                            </button>
+                        }
+                        else
+                        {
+                            <form asp-action="Delete" method="post" style="display:inline;">
+                                <input type="hidden" asp-for="Id" />
+                                <button type="submit" class="btn btn-danger btn-lg">
+                                    <i class="fas fa-trash-alt me-2"></i>Supprimer Définitivement
+                                </button>
+                            </form>
+                        }
+                        <a asp-action="Index" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-arrow-left me-2"></i>Annuler
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+</style>
+</div>

@@ -1,0 +1,62 @@
+@model gestion_pharma.Models.Entities.Commande
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<h1>Details</h1>
+
+<div>
+    <h4>Commande</h4>
+    <hr />
+    <dl class="row">
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Montant)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Montant)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Statut)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Statut)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Client)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Client.Email)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.CreatedAt)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.CreatedAt)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.UpdatedAt)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.UpdatedAt)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.IsActive)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.IsActive)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
+    <a asp-action="Index">Back to List</a>
+    @if (Model != null && Model.Statut == gestion_pharma.Models.Enums.StatutCommande.EnAttente)
+    {
+        <a class="btn btn-success ms-3" asp-controller="Paiements" asp-action="ProcessEnLigne" asp-route-commandeId="@Model.Id">Payer en ligne</a>
+        <form asp-controller="Paiements" asp-action="PaiementSurPlace" method="post" class="d-inline ms-2">
+            <input type="hidden" name="commandeId" value="@Model.Id" />
+            <button type="submit" class="btn btn-secondary">Payer sur place</button>
+        </form>
+    }
+</div>
